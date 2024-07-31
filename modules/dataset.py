@@ -45,52 +45,8 @@ class EqualizedDataset(Dataset):
         # reduce the dataset to the same size as the ai dataset
         real_dataset = self.train_dataset_real.select(range(ai_images_count))
 
-        print("Creating equalized dataset")
         train_dataset = concatenate_datasets([self.train_dataset_ai, real_dataset])
-        print("Equalized dataset created")
 
         train_dataset = train_dataset.shuffle()
 
         return train_dataset
-
-    # # we will get the number of ai images for base
-    # def __equalize_data(self):
-    #     # randomize the dataset
-    #     self.train_dataset = self.train_dataset.shuffle()
-
-    #     indicies = []
-
-    #     ai_images_count = 0
-    #     real_images_count = 0
-
-    #     loop = tqdm.tqdm(range(len(self.train_dataset)), desc='Generating Indicies for Equalized Dataset')
-    #     for i in loop:
-    #         if self.train_dataset[i]['label'] == 1:
-    #             indicies.append(i)
-    #             ai_images_count += 1
-    #         elif real_images_count < ai_images_count and self.train_dataset[i]['label'] == 0:
-    #             indicies.append(i)
-    #             real_images_count += 1
-        
-    #     print('AI images:', ai_images_count)
-    #     print('Real images:', real_images_count)
-
-    #     equalized_dataset = {
-    #         'image': [],
-    #         'label': [],
-    #         'id': []
-    #     }
-
-    #     loop = tqdm.tqdm(indicies, desc='Creating equalized dataset')
-    #     for i in loop:
-    #         equalized_dataset['image'].append(self.train_dataset[i]['image'])
-    #         equalized_dataset['label'].append(self.train_dataset[i]['label'])
-    #         equalized_dataset['id'].append(self.train_dataset[i]['id'])
-
-    #     equalized_dataset = HFDataset.from_dict(equalized_dataset)
-
-    #     # shuffle the dataset
-    #     equalized_dataset = equalized_dataset.shuffle()
-
-    #     return equalized_dataset
-        

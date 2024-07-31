@@ -37,7 +37,8 @@ def transforms(examples):
 class CustomTrainerCallback(TrainerCallback):
     def on_epoch_begin(self, args, state, control, model=None, **kwargs):
         global dataset
-        print("Mixing the dataset")
+        if accelerator.is_main_process:
+            print("Mixing the dataset")
         new_train_dataset = dataset.mix_train_dataset()
         new_train_dataset = new_train_dataset.with_transform(transforms)
         model.train_dataset = new_train_dataset
@@ -95,8 +96,6 @@ if __name__ == '__main__':
     train_dataset = train_dataset.with_transform(transforms)
     val_dataset = val_dataset.with_transform(transforms)
     
-    print(train_dataset[0])
-
     # Setting up Trainer
 
     if config.num_epochs is None:
@@ -104,10 +103,11 @@ if __name__ == '__main__':
     else:
         num_epochs = config.num_epochs
 
-    print('--- Hyperparameters ---')
-    for key in config._jsonData.keys():
-        print(f"{key}: {config._jsonData[key]}")
-    print('-----------------------')
+    if accelerator.is_main_process:
+        print('--- Hyperparameters ---')
+        for key in config._jsonData.keys():
+            print(f"{key}: {config._jsonData[key]}")
+        print('-----------------------')
 
     training_args = TrainingArguments(
         output_dir=config.checkpoint_path,
