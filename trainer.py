@@ -56,6 +56,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train a model to detect AI-created images.')
     parser.add_argument('-c','--config', help='Path to the training config file', required=True)
     parser.add_argument('-w','--wandb', help='Use wandb for logging', action='store_true')
+    parser.add_argument('-r','--resume', help='Resume training from the given checkpoint path', default=None)
 
     args = parser.parse_args()
 
@@ -64,7 +65,10 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
     # Loading the model
-    model = AutoModelForImageClassification.from_pretrained(config.model_base)
+    if args.resume is not None:
+        model = AutoModelForImageClassification.from_pretrained(args.resume)
+    else:
+        model = AutoModelForImageClassification.from_pretrained(config.model_base)
     model.to(device)
 
 
