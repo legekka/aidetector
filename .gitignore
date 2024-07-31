@@ -1,0 +1,6 @@
+__pycache__/
+data/
+models/
+checkpoints/
+wandb/
+modules/db_model.py
