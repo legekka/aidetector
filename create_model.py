@@ -14,8 +14,8 @@ model = ViTForImageClassification(
     config,
 )
 # set up the id2label and label2id
-model.config.id2label = {0: 'ai', 1: 'real'}
-model.config.label2id = {'ai': 0, 'real': 1}
+model.config.id2label = {0: 'real', 1: 'ai'}
+model.config.label2id = {'real': 0, 'ai': 1}
 
 # print parameter count 
 print('Number of parameters:', model.num_parameters())

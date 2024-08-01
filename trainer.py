@@ -4,7 +4,7 @@ import torch
 import wandb
 
 from torch.utils.data import DataLoader
-from torchvision.transforms import RandomResizedCrop, Compose, Normalize, ToTensor
+from torchvision.transforms import RandomResizedCrop, Compose, Normalize, ToTensor, Resize
 
 from accelerate import Accelerator
 from transformers import AutoModelForImageClassification, AutoImageProcessor
@@ -22,14 +22,23 @@ import io
 
 def transforms(examples):
     global _transforms
-    examples["pixel_values"] = []
-    for i in range(len(examples["image"])):
-        try:
-            examples["pixel_values"].append(_transforms(examples["image"][i].convert("RGB")))
-        except:
-            # we will try to open it again from the bytes
-            examples["pixel_values"].append(_transforms(Image.open(io.BytesIO(examples["image"][i]['bytes'])).convert("RGB")))
-    
+    # for i in range(len(examples["image"])):
+    #     if isinstance(examples["image"][i], dict):
+    #         examples["pixel_values"].append(_transforms(Image.open(io.BytesIO(examples["image"][i]['bytes'])).convert("RGB")))
+    #     elif isinstance(examples["image"][i], Image.Image):
+    #         examples["pixel_values"].append(_transforms(examples["image"][i].convert("RGB")))
+
+    # examples["image"] is now already a list of PIL images
+    examples["pixel_values"] = [_transforms(image.convert('RGB')) for image in examples["image"]]
+
+
+    del examples["image"]
+    del examples["id"]
+    return examples
+
+def val_transforms(examples):
+    global _val_transforms
+    examples["pixel_values"] = [_val_transforms(image.convert('RGB')) for image in examples["image"]]
     del examples["image"]
     del examples["id"]
     return examples
@@ -84,7 +93,10 @@ if __name__ == '__main__':
         else (image_processor.size["height"], image_processor.size["width"])
     )
     normalize = Normalize(mean=image_processor.image_mean, std=image_processor.image_std)
-    _transforms = Compose([RandomResizedCrop(size), ToTensor(), normalize])
+    _transforms = Compose([Resize(size), ToTensor(), normalize])
+
+    # validation transforms just resizes the image to the model's input size, without cropping
+    _val_transforms = Compose([Resize(size), ToTensor(), normalize])
 
     # Loading the dataset
     global dataset
@@ -94,7 +106,7 @@ if __name__ == '__main__':
     val_dataset = dataset.get_val_dataset()
 
     train_dataset = train_dataset.with_transform(transforms)
-    val_dataset = val_dataset.with_transform(transforms)
+    val_dataset = val_dataset.with_transform(val_transforms)
     
     # Setting up Trainer
 
@@ -141,7 +153,7 @@ if __name__ == '__main__':
         callbacks=[CustomTrainerCallback()],
     )
 
-    if wandb and accelerator.is_main_process:
+    if args.wandb and accelerator.is_main_process:
         wandb.init(project=config.wandb['project'], name=config.wandb['name'], tags=config.wandb['tags'])
         wandb.config.update(config._jsonData)
         wandb.watch(model)

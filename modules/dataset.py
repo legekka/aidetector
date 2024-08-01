@@ -22,8 +22,8 @@ class EqualizedDataset(Dataset):
         self.train_dataset = load_dataset('parquet', data_files=train_files, split='train')
         self.val_dataset = load_dataset('parquet', data_files=test_files, split='train')
 
-        self.train_dataset_ai = self.train_dataset.filter(lambda example: example['label'] == 1)
-        self.train_dataset_real = self.train_dataset.filter(lambda example: example['label'] == 0)
+        self.train_dataset_real = self.train_dataset.filter(lambda example: example['label'] == 0, num_proc=4)
+        self.train_dataset_ai = self.train_dataset.filter(lambda example: example['label'] == 1, num_proc=4)
   
         del self.train_dataset
 

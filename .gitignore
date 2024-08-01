@@ -5,3 +5,4 @@ checkpoints/
 wandb/
 modules/db_model.py
 training_config.json
+tmp*/
