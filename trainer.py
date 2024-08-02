@@ -93,7 +93,7 @@ if __name__ == '__main__':
         else (image_processor.size["height"], image_processor.size["width"])
     )
     normalize = Normalize(mean=image_processor.image_mean, std=image_processor.image_std)
-    _transforms = Compose([Resize(size), ToTensor(), normalize])
+    _transforms = Compose([RandomResizedCrop(size, scale = (0.66, 1)), ToTensor(), normalize])
 
     # validation transforms just resizes the image to the model's input size, without cropping
     _val_transforms = Compose([Resize(size), ToTensor(), normalize])
