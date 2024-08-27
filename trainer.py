@@ -11,14 +11,37 @@ from transformers import AutoModelForImageClassification, AutoImageProcessor
 from transformers import TrainingArguments, Trainer, TrainerCallback, DefaultDataCollator
 
 from modules.config import Config
-from modules.dataset import EqualizedDataset
 
 
 import PIL.Image as Image
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-import io
+
+def get_class_weights(dataset):
+    import numpy as np
+    labels = dataset['label']
+    class_counts = np.bincount(labels)
+
+    class_weights = 1.0 / class_counts
+
+    # normalize the weights
+    class_weights = class_weights / class_weights.sum() * len(class_counts)
+
+    # convert to tensor
+    class_weights = torch.tensor(class_weights, dtype=torch.float32)
+
+    return class_weights
+
+
+def load_parquet_dataset(data_dir, split):
+    from datasets import load_dataset
+    parquet_files = os.listdir(data_dir)
+    parquet_files = [f for f in parquet_files if split in f]
+    parquet_files = [os.path.join(data_dir, f) for f in parquet_files]
+
+    dataset = load_dataset('parquet', data_files=parquet_files, split="train")
+    return dataset
 
 def transforms(examples):
     global _transforms
@@ -36,14 +59,14 @@ def val_transforms(examples):
     del examples["id"]
     return examples
 
-class CustomTrainerCallback(TrainerCallback):
-    def on_epoch_begin(self, args, state, control, model=None, **kwargs):
-        global dataset
-        if accelerator.is_main_process:
-            print("Mixing the dataset")
-        new_train_dataset = dataset.mix_train_dataset()
-        new_train_dataset = new_train_dataset.with_transform(transforms)
-        model.train_dataset = new_train_dataset
+class CustomTrainer(Trainer):
+    def compute_loss(self, model, inputs, return_outputs=False):
+        global loss_fn
+        labels = inputs.get("labels")
+        outputs = model(**inputs)
+        logits = outputs.get("logits")
+        loss = loss_fn(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+        return (loss, outputs) if return_outputs else loss
 
 # if we are on windows, we need to check it, and set the torch backend to gloo
 if os.name == 'nt':
@@ -86,17 +109,19 @@ if __name__ == '__main__':
         else (image_processor.size["height"], image_processor.size["width"])
     )
     normalize = Normalize(mean=image_processor.image_mean, std=image_processor.image_std)
-    _transforms = Compose([RandomResizedCrop(size, scale = (0.66, 1)), ToTensor(), normalize])
+    _transforms = Compose([RandomResizedCrop(size, scale = (0.16, 1)), ToTensor(), normalize])
 
     # validation transforms just resizes the image to the model's input size, without cropping
     _val_transforms = Compose([Resize(size), ToTensor(), normalize])
 
-    # Loading the dataset
-    global dataset
+    train_dataset = load_parquet_dataset(config.dataset_path, 'train')
+    val_dataset = load_parquet_dataset(config.dataset_path, 'test')
 
-    dataset = EqualizedDataset(config.dataset_path)
-    train_dataset = dataset.get_train_dataset()
-    val_dataset = dataset.get_val_dataset()
+    global loss_fn
+    print('Calculating class weights')
+    class_weights = get_class_weights(train_dataset)
+    loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights.to(device))
+    print('Class weights calculated:', class_weights)
 
     train_dataset = train_dataset.with_transform(transforms)
     val_dataset = val_dataset.with_transform(val_transforms)
@@ -137,13 +162,16 @@ if __name__ == '__main__':
 
     data_collator = DefaultDataCollator()
 
-    trainer = Trainer(
+
+    
+
+    trainer = CustomTrainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=val_dataset,
         data_collator=data_collator,
-        callbacks=[CustomTrainerCallback()],
+        callbacks=[],
     )
 
     if args.wandb and accelerator.is_main_process:
