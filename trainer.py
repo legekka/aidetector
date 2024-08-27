@@ -22,13 +22,6 @@ import io
 
 def transforms(examples):
     global _transforms
-    # for i in range(len(examples["image"])):
-    #     if isinstance(examples["image"][i], dict):
-    #         examples["pixel_values"].append(_transforms(Image.open(io.BytesIO(examples["image"][i]['bytes'])).convert("RGB")))
-    #     elif isinstance(examples["image"][i], Image.Image):
-    #         examples["pixel_values"].append(_transforms(examples["image"][i].convert("RGB")))
-
-    # examples["image"] is now already a list of PIL images
     examples["pixel_values"] = [_transforms(image.convert('RGB')) for image in examples["image"]]
 
 
