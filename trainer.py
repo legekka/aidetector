@@ -36,10 +36,8 @@ def load_parquet_dataset(data_dir, split):
     from datasets import load_dataset
     # check if data_dir exists, if not, we will load the dataset from the hub
     if not os.path.exists(data_dir):
-        print(f"Directory {data_dir} does not exist, loading dataset from the hub")
         return load_dataset(data_dir, split=split)
     else:
-        print(f"Loading dataset from {data_dir}")
         parquet_files = os.listdir(data_dir)
         parquet_files = [f for f in parquet_files if split in f]
         parquet_files = [os.path.join(data_dir, f) for f in parquet_files]
