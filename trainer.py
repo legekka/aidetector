@@ -35,13 +35,19 @@ def get_class_weights(dataset):
 
 
 def load_parquet_dataset(data_dir, split):
-    from datasets import load_dataset
-    parquet_files = os.listdir(data_dir)
-    parquet_files = [f for f in parquet_files if split in f]
-    parquet_files = [os.path.join(data_dir, f) for f in parquet_files]
+    # check if data_dir exists, if not, we will load the dataset from the hub
+    if not os.path.exists(data_dir):
+        print(f"Directory {data_dir} does not exist, loading dataset from the hub")
+        return load_dataset(data_dir, split=split)
+    else:
+        print(f"Loading dataset from {data_dir}")
+        from datasets import load_dataset
+        parquet_files = os.listdir(data_dir)
+        parquet_files = [f for f in parquet_files if split in f]
+        parquet_files = [os.path.join(data_dir, f) for f in parquet_files]
 
-    dataset = load_dataset('parquet', data_files=parquet_files, split="train")
-    return dataset
+        dataset = load_dataset('parquet', data_files=parquet_files, split="train")
+        return dataset
 
 def transforms(examples):
     global _transforms
@@ -115,8 +121,10 @@ if __name__ == '__main__':
     _val_transforms = Compose([Resize(size), ToTensor(), normalize])
 
     train_dataset = load_parquet_dataset(config.dataset_path, 'train')
+    print('Train dataset loaded with size:', len(train_dataset))
     val_dataset = load_parquet_dataset(config.dataset_path, 'test')
-
+    print('Validation dataset loaded with size:', len(val_dataset))
+    
     global loss_fn
     print('Calculating class weights')
     class_weights = get_class_weights(train_dataset)
