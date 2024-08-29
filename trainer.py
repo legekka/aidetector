@@ -92,7 +92,7 @@ if __name__ == '__main__':
 
     config = Config(args.config)
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = accelerator.device if torch.cuda.is_available() else 'cpu'
 
     # Loading the model
     if args.resume is not None:
@@ -119,15 +119,18 @@ if __name__ == '__main__':
     _val_transforms = Compose([Resize(size), ToTensor(), normalize])
 
     train_dataset = load_parquet_dataset(config.dataset_path, 'train')
-    print('Train dataset loaded with size:', len(train_dataset))
     val_dataset = load_parquet_dataset(config.dataset_path, 'test')
-    print('Validation dataset loaded with size:', len(val_dataset))
+
+    if accelerator.is_main_process:
+        print('Train dataset loaded with size:', len(train_dataset))
+        print('Validation dataset loaded with size:', len(val_dataset))
 
     global loss_fn
-    print('Calculating class weights')
     class_weights = get_class_weights(train_dataset)
     loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights.to(device))
-    print('Class weights calculated:', class_weights)
+    
+    if accelerator.is_main_process:
+        print('Class weights calculated:', class_weights)
 
     train_dataset = train_dataset.with_transform(transforms)
     val_dataset = val_dataset.with_transform(val_transforms)
