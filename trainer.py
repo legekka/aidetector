@@ -4,6 +4,7 @@ import torch
 import wandb
 from torchvision.transforms import RandomResizedCrop, Compose, Normalize, ToTensor, Resize
 
+from torch.utils.data import DataLoader
 from accelerate import Accelerator
 from transformers import AutoModelForImageClassification, AutoImageProcessor
 from transformers import TrainingArguments, Trainer, DefaultDataCollator
@@ -79,18 +80,28 @@ if os.name == 'nt':
 
 accelerator = Accelerator()
 
+parser = argparse.ArgumentParser(description='Train a model to detect AI-created images.')
+parser.add_argument('-c','--config', help='Path to the training config file', required=True)
+parser.add_argument('-w','--wandb', help='Use wandb for logging', action='store_true')
+parser.add_argument('-r','--resume', help='Resume training from the given checkpoint path', default=None)
+
+args = parser.parse_args()
+
+config = Config(args.config)
+
+device = accelerator.device if torch.cuda.is_available() else 'cpu'
+
+image_processor = AutoImageProcessor.from_pretrained(config.model_base, use_fast=True)
+size = (
+    image_processor.size["shortest_edge"]
+    if "shortest_edge" in image_processor.size
+    else (image_processor.size["height"], image_processor.size["width"])
+)
+normalize = Normalize(mean=image_processor.image_mean, std=image_processor.image_std)
+_transforms = Compose([RandomResizedCrop(size, scale = (0.16, 1)), ToTensor(), normalize])
+_val_transforms = Compose([Resize(size), ToTensor(), normalize])
+
 if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser(description='Train a model to detect AI-created images.')
-    parser.add_argument('-c','--config', help='Path to the training config file', required=True)
-    parser.add_argument('-w','--wandb', help='Use wandb for logging', action='store_true')
-    parser.add_argument('-r','--resume', help='Resume training from the given checkpoint path', default=None)
-
-    args = parser.parse_args()
-
-    config = Config(args.config)
-
-    device = accelerator.device if torch.cuda.is_available() else 'cpu'
 
     # Loading the model
     if args.resume is not None:
@@ -102,20 +113,7 @@ if __name__ == '__main__':
 
     torch.cuda.empty_cache()
 
-    global image_processor
-    global _transforms
-    image_processor = AutoImageProcessor.from_pretrained(config.model_base, use_fast=True)
-    size = (
-        image_processor.size["shortest_edge"]
-        if "shortest_edge" in image_processor.size
-        else (image_processor.size["height"], image_processor.size["width"])
-    )
-    normalize = Normalize(mean=image_processor.image_mean, std=image_processor.image_std)
-    _transforms = Compose([RandomResizedCrop(size, scale = (0.16, 1)), ToTensor(), normalize])
-
     # validation transforms just resizes the image to the model's input size, without cropping
-    _val_transforms = Compose([Resize(size), ToTensor(), normalize])
-
     train_dataset = load_parquet_dataset(config.dataset_path, 'train')
     val_dataset = load_parquet_dataset(config.dataset_path, 'test')
 
@@ -132,6 +130,8 @@ if __name__ == '__main__':
 
     train_dataset = train_dataset.with_transform(transforms)
     val_dataset = val_dataset.with_transform(val_transforms)
+
+    train_dataloader = DataLoader(train_dataset, batch_size=config.batch_size, num_workers=config.num_workers, shuffle=True)
     
     # Setting up Trainer
 
