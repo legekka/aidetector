@@ -165,12 +165,11 @@ if __name__ == '__main__':
         bf16=True,
         report_to="wandb" if args.wandb else "none",
         ddp_find_unused_parameters=False,
+        dataloader_persistent_workers=True,
+        dataloader_num_workers=config.num_workers,
     )
 
     data_collator = DefaultDataCollator()
-
-
-    
 
     trainer = CustomTrainer(
         model=model,
