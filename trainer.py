@@ -167,6 +167,7 @@ if __name__ == '__main__':
         ddp_find_unused_parameters=False,
         dataloader_persistent_workers=True,
         dataloader_num_workers=config.num_workers,
+        warmup_steps=config.warmup_steps,
     )
 
     data_collator = DefaultDataCollator()
