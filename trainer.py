@@ -155,7 +155,7 @@ if __name__ == '__main__':
         lr_scheduler_type=config.scheduler,
         optim=config.optimizer,
         learning_rate=config.learning_rate,
-        logging_steps=5,
+        logging_steps=config.logging_steps,
         logging_dir=config.checkpoint_path,
         save_strategy="epoch" if config.num_epochs is not None else "steps",
         save_steps=1000 if config.max_steps is not None else None,

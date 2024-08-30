@@ -30,6 +30,7 @@ class Config:
         self.d_coef = self._jsonData["d_coef"] if "d_coef" in self._jsonData else 1
         self.eta_min = self._jsonData["eta_min"] if "eta_min" in self._jsonData else 0.0
         self.warmup_steps = self._jsonData["warmup_steps"] if "warmup_steps" in self._jsonData else 0
+        self.logging_steps = self._jsonData["logging_steps"] if "logging_steps" in self._jsonData else 5
         if "wandb" in self._jsonData:
             self.wandb = {
                 "project": self._jsonData["wandb"]["project"],
