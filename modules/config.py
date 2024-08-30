@@ -20,6 +20,7 @@ class Config:
         self.dataset_path = self._jsonData["dataset_path"]
    
         self.batch_size = self._jsonData["batch_size"] if "batch_size" in self._jsonData else 8
+        self.gradient_accumulation_steps = self._jsonData["gradient_accumulation_steps"] if "gradient_accumulation_steps" in self._jsonData else 1
         self.num_workers = self._jsonData["num_workers"] if "num_workers" in self._jsonData else 0
         self.num_epochs = self._jsonData["num_epochs"] if "num_epochs" in self._jsonData else None
         self.max_steps = self._jsonData["max_steps"] if "max_steps" in self._jsonData else None

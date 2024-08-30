@@ -151,6 +151,7 @@ if __name__ == '__main__':
         remove_unused_columns=False,
         num_train_epochs=num_epochs,
         per_device_train_batch_size=config.batch_size,
+        gradient_accumulation_steps=config.gradient_accumulation_steps,
         per_device_eval_batch_size=config.batch_size,
         lr_scheduler_type=config.scheduler,
         optim=config.optimizer,
